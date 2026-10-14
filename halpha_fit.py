@@ -3,6 +3,7 @@ import corner
 import numpy as np 
 from astro_functions import wv_to_vel
 import matplotlib.pyplot as plt 
+import pandas as pd
 
 ## global constants 
 
@@ -152,9 +153,9 @@ def narrow_fit_ha(wv, flux, flux_err, z, spectra_name, save_direc,
 
     ## save halpha fit
 
-    data_to_save = pd.DataFrame({"Center": flat_samples_hb[:,0], 
-                                    "Narrow Amp" : flat_samples_hb[:,1],
-                                    "Narrow Sigma": flat_samples_hb[:,2], 
-                                    "Continuum" : flat_samples_hb[:,3]})
+    data_to_save = pd.DataFrame({"Center": flat_samples_ha[:,0], 
+                                    "Narrow Amp" : flat_samples_ha[:,1],
+                                    "Narrow Sigma": flat_samples_ha[:,2], 
+                                    "Continuum" : flat_samples_ha[:,3]})
     data_to_save.to_csv(full_path)
             
