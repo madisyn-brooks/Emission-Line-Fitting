@@ -2,7 +2,7 @@ import emcee
 import corner
 import numpy as np 
 from astro_functions import wv_to_vel
-import matplotlib.pyplot
+import matplotlib.pyplot as plt 
 
 ## global constants 
 
@@ -98,7 +98,8 @@ def narrow_ha_log_probability(theta, vel, flux, flux_err):
         return -np.inf
     return lp + narrow_ha_log_likelihood(theta, vel, flux, flux_err,)
 
-def narrow_fit_hb(wv, flux, flux_err, z, spectra_name, *, scale_factor = 1e18, fit_window=5000):
+def narrow_fit_ha(wv, flux, flux_err, z, spectra_name, save_direc, 
+                  *, scale_factor = 1e18, fit_window=5000, plot = False):
     
     print("fitting the halpha line...")
     print("---------------------------")
@@ -112,8 +113,10 @@ def narrow_fit_hb(wv, flux, flux_err, z, spectra_name, *, scale_factor = 1e18, f
     flux = flux[bounds] * scale_factor
     flux_err = flux_err[bounds] * scale_factor
 
+    ## get initial sigma_nar as 2 * velocity pixel spacing
+    ## so initial sigma_nar will change with redshift 
 
-    
+    sigma_nar = (vel[1] - vel[0]) * 2
     
     pos = [0, .7*np.nanmax(flux),  sigma_nar, 0]  \
     + 1e-10 * np.random.rand(16, len(labels))
@@ -124,8 +127,34 @@ def narrow_fit_hb(wv, flux, flux_err, z, spectra_name, *, scale_factor = 1e18, f
             nwalkers, ndim, narrow_ha_log_probability, args=(vel, flux, flux_err
                                                      )
         )
-    sampler.run_mcmc(pos, 25000, progress = True, store = True) #(25000)
+    sampler.run_mcmc(pos, 20000, progress = True, store = True)
 
     labels = ["center", "amp nar", r"$\sigma_{nar}$", "cont"]
-    fig, axes = plt.subplots(len(labels), figsize=(10, len(labels)), sharex=True)
+
+    ## get the chains from the emcee fit 
     samples = sampler.get_chain()
+    flat_samples_ha = sampler.get_chain(discard= 10000, thin=15, flat=True)
+
+    if plot == True:
+        fig, axes = plt.subplots(len(labels), figsize=(10, len(labels)), sharex=True)
+
+        for i in range(ndim):
+            ax = axes[i]
+            ax.plot(samples[:, :, i], "k.", alpha=0.3, markersize = 0.2)
+            ax.set_xlim(0, len(samples))
+            ax.set_ylabel(labels[i])
+            #ax.yaxis.set_label_coords(-0.1, 0.5)
+
+            axes[-1].set_xlabel('step number');
+            fig = corner.corner(
+                flat_samples_ha, labels=labels, quantiles=[0.16, 0.5, 0.84], show_titles = True, plot_datapoints=False
+                )
+
+    ## save halpha fit
+
+    data_to_save = pd.DataFrame({"Center": flat_samples_hb[:,0], 
+                                    "Narrow Amp" : flat_samples_hb[:,1],
+                                    "Narrow Sigma": flat_samples_hb[:,2], 
+                                    "Continuum" : flat_samples_hb[:,3]})
+    data_to_save.to_csv(full_path)
+            
