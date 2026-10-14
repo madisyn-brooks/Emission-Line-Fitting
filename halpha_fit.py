@@ -1,6 +1,14 @@
 import emcee 
 import corner
 import numpy as np 
+from astro_functions import wv_to_vel
+import matplotlib.pyplot
+
+## global constants 
+
+ha_line = 0.6564614 # microns
+hb_line = 0.4862721 # microns
+o3_line = 0.5008239 # microns 
 
 def narrow_ha_log_prior(theta, vel,
                  amp_bounds = (0, 20), cont_bounds = (0, 2)):
@@ -89,3 +97,35 @@ def narrow_ha_log_probability(theta, vel, flux, flux_err):
     if not np.isfinite(lp):
         return -np.inf
     return lp + narrow_ha_log_likelihood(theta, vel, flux, flux_err,)
+
+def narrow_fit_hb(wv, flux, flux_err, z, spectra_name, *, scale_factor = 1e18, fit_window=5000):
+    
+    print("fitting the halpha line...")
+    print("---------------------------")
+
+    ## convert wavelength to velocity
+    vel = wv_to_vel(wv, z, ha_line)
+
+    ## limit vel, flux, and flux_err to +- fit_window around line 
+    bounds = (vel > -1*fit_window) & (vel < 1*fit_window)
+    vel = vel[bounds]
+    flux = flux[bounds] * scale_factor
+    flux_err = flux_err[bounds] * scale_factor
+
+
+    
+    
+    pos = [0, .7*np.nanmax(flux),  sigma_nar, 0]  \
+    + 1e-10 * np.random.rand(16, len(labels))
+
+    nwalkers, ndim = pos.shape
+
+    sampler = emcee.EnsembleSampler(
+            nwalkers, ndim, narrow_ha_log_probability, args=(vel, flux, flux_err
+                                                     )
+        )
+    sampler.run_mcmc(pos, 25000, progress = True, store = True) #(25000)
+
+    labels = ["center", "amp nar", r"$\sigma_{nar}$", "cont"]
+    fig, axes = plt.subplots(len(labels), figsize=(10, len(labels)), sharex=True)
+    samples = sampler.get_chain()
