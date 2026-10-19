@@ -169,10 +169,12 @@ def narrow_fit_ha(wv, flux, flux_err, z, spectra_name, save_direc,
     ## check if the velocity array is empty, or if the flux is all nans and return all nans for parameter values
     if len(vel) == 0 or np.all(np.isnan(flux)):
         print("Velocity array is empty or flux is all NaNs. Returning NaNs.")
-        data_to_save = pd.DataFrame({   "Center": np.nan,
-                                        "Narrow Amp" : np.nan,
-                                        "Narrow Sigma": np.nan, 
-                                        "Continuum" : np.nan })
+        
+        full_path = f"{save_direc}/{spectra_name}_narrow_ha_fit.csv"
+        data_to_save = pd.DataFrame({   "Center": [np.nan],
+                                        "Narrow Amp" : [np.nan],
+                                        "Narrow Sigma": [np.nan], 
+                                        "Continuum" : [np.nan] })
         data_to_save.to_csv(full_path)
 
         
