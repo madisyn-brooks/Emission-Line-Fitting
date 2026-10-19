@@ -99,8 +99,47 @@ def narrow_ha_log_probability(theta, vel, flux, flux_err):
         return -np.inf
     return lp + narrow_ha_log_likelihood(theta, vel, flux, flux_err,)
 
+def plot_narrow_emission(vel, flux, flux_err, flat_samples):
+    """
+    Parameters
+    -----------
+    vel: np.array
+            velocity array of data (km/s)
+    flux: np.array
+        flux array of data (flam)
+    flux_err: np.array
+        flux error array of data (flam)
+    flat_samples: np.array
+        flattened mcmc samples   
+
+    Returns
+    -----------
+    fig:  matplolib figure object 
+    """
+
+    ## grab fit parameters from mcmc chains
+    cen_16, cen_50, cen_84 = np.percentile(flat_samples[:,0], [16, 50, 84]) 
+    n_amp_16, n_amp_50, n_amp_84 = np.percentile(flat_samples[:,1], [16, 50, 84]) 
+    n_sig_16, n_sig_50, n_sig_84 = np.percentile(flat_samples[:,2], [16, 50, 84])
+    cont_16, cont_50, cont_84 = np.percentile(flat_samples[:,3], [16, 50, 84])
+    
+    ## make our narrow gaussian to plot 
+    narrow_model = n_amp_50 * np.exp(-0.5 * ((vel - cen_50) / n_sig_50)**2) + cont_50
+
+    fig, ax = plt.subplots(figsize = [8,5])
+    ax.plot(vel, flux, drawstyle = "steps-mid", color = "black")
+    ax.fill_between(vel, flux - flux_err, flux + flux_err, color = "lightgray", step='mid')
+    ax.plot(vel, narrow_model, color = "blue", label = r" $\mathrm{H\alpha}$ Narrow", linestyle = "--")
+    ax.set_xlabel(r"Velocity [km/s]", fontsize = 16)
+    ax.set_ylabel(r'$f_{\lambda}$ [10$^{-19}$ erg s$^{-1}$ cm$^{-2}$ Å$^{-1}$]', fontsize = 16)
+    ax.legend(frameon = False, fontsize = 14)
+    ax.set_xlim(-5000,5000)
+
+    return fig
+
+
 def narrow_fit_ha(wv, flux, flux_err, z, spectra_name, save_direc, 
-                  *, scale_factor = 1e18, fit_window=5000, plot = False):
+                  *, scale_factor = 1e18, fit_window=5000, plot_chains = False, plot_spec = False):
     
     print("fitting the halpha line...")
     print("---------------------------")
@@ -113,6 +152,13 @@ def narrow_fit_ha(wv, flux, flux_err, z, spectra_name, save_direc,
     vel = vel[bounds]
     flux = flux[bounds] * scale_factor
     flux_err = flux_err[bounds] * scale_factor
+
+    ## getting rid of units so the fitter doesn't get mad at us 
+    flux = flux.value
+    flux_err = flux_err.value 
+
+    ## fit parameters
+    labels = ["center", "amp nar", r"$\sigma_{nar}$", "cont"]
 
     ## get initial sigma_nar as 2 * velocity pixel spacing
     ## so initial sigma_nar will change with redshift 
@@ -130,13 +176,12 @@ def narrow_fit_ha(wv, flux, flux_err, z, spectra_name, save_direc,
         )
     sampler.run_mcmc(pos, 20000, progress = True, store = True)
 
-    labels = ["center", "amp nar", r"$\sigma_{nar}$", "cont"]
 
     ## get the chains from the emcee fit 
     samples = sampler.get_chain()
     flat_samples_ha = sampler.get_chain(discard= 10000, thin=15, flat=True)
 
-    if plot == True:
+    if plot_chains == True:
         fig, axes = plt.subplots(len(labels), figsize=(10, len(labels)), sharex=True)
 
         for i in range(ndim):
@@ -151,11 +196,20 @@ def narrow_fit_ha(wv, flux, flux_err, z, spectra_name, save_direc,
                 flat_samples_ha, labels=labels, quantiles=[0.16, 0.5, 0.84], show_titles = True, plot_datapoints=False
                 )
 
-    ## save halpha fit
+    if plot_spec == True:
+        print(f"plotting fit...")
+        fig = plot_narrow_emission(vel, flux, flux_err, flat_samples_ha)
+        fig_path = f"{save_direc}/{spectra_name}_narrow_ha_fit.png"
+        fig.savefig(fig_path, bbox_inches = "tight", dpi=300)
+        
+    ## save halpha fit, yay!
 
+    print(f"saving halpha fit...")
+    full_path = f"{save_direc}/{spectra_name}_narrow_ha_fit.csv"
     data_to_save = pd.DataFrame({"Center": flat_samples_ha[:,0], 
                                     "Narrow Amp" : flat_samples_ha[:,1],
                                     "Narrow Sigma": flat_samples_ha[:,2], 
                                     "Continuum" : flat_samples_ha[:,3]})
     data_to_save.to_csv(full_path)
+
             

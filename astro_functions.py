@@ -76,8 +76,9 @@ def wv_to_vel(wv, z, line_use):
         velocity array centered around line of interest, units of km/s   
 
     """
+    line_use = line_use * u.um
 
     line_obs = (1+z) * line_use
-    vel = (wv-line_obs)/line_obs * u.C.value
+    vel = (wv-line_obs)/line_obs * 3e5
 
     return vel 
