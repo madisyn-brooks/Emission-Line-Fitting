@@ -96,7 +96,7 @@ def calculate_flux_and_luminosity(z, line_use, amp, sigma):
     z: float
         redshift of source 
     line_use: float
-        wavelength of emission line in angstroms 
+        wavelength of emission line in microns 
     amp: np.array
         full amplitude posteior from mcmc fit 
     sigma: np.array
@@ -111,7 +111,7 @@ def calculate_flux_and_luminosity(z, line_use, amp, sigma):
     
     """
 
-    lambda_use = (1 + z) * (line_use * 1e5)
+    lambda_use = (1 + z) * (line_use * 1e5) ## convert to angstroms and observed frame 
     
     flux = np.sqrt(2 * np.pi) * amp * ((sigma / 3e5) * lambda_use) * u.erg / u.s / u.cm**2
     flux_percentiles = [np.percentile(flux.value, 16), np.percentile(flux.value, 50), np.percentile(flux.value, 84)]
