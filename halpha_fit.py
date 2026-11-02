@@ -12,7 +12,7 @@ hb_line = 0.4862721 # microns
 o3_line = 0.5008239 # microns 
 
 plt.rcParams.update({
-"text.usetex": True,
+"text.usetex": False,
 'axes.labelsize' : 16,
 'xtick.labelsize' : 14,
 'ytick.labelsize' : 14,
@@ -193,7 +193,7 @@ def narrow_fit_ha(wv, flux, flux_err, z, spectra_name, save_direc,
         sigma_nar = (vel[1] - vel[0]) * 2
         
         pos = [0, .7*np.nanmax(flux),  sigma_nar, 0]  \
-        + 1e-10 * np.random.rand(16, len(labels))
+        + 1e-4 * np.random.rand(16, len(labels))
 
         nwalkers, ndim = pos.shape
 
@@ -201,12 +201,12 @@ def narrow_fit_ha(wv, flux, flux_err, z, spectra_name, save_direc,
                 nwalkers, ndim, narrow_ha_log_probability, args=(vel, flux, flux_err
                                                         )
             )
-        sampler.run_mcmc(pos, 20000, progress = True, store = True)
+        sampler.run_mcmc(pos, 10000, progress = False, store = True)
 
 
         ## get the chains from the emcee fit 
         samples = sampler.get_chain()
-        flat_samples_ha = sampler.get_chain(discard= 10000, thin=15, flat=True)
+        flat_samples_ha = sampler.get_chain(discard= 2500, thin=10, flat=True)
 
         if plot_chains == True:
             fig, axes = plt.subplots(len(labels), figsize=(10, len(labels)), sharex=True)
@@ -264,11 +264,12 @@ def broad_ha_log_prior(theta, vel,
     
     center, broad_center, amp_nar, amp_broad, sigma_nar, sigma_broad, amp_6585, cont = theta  
 
+    narrow_cen_bounds = (-50, 50)
     cen_bounds = (-250, 250)
     sigma_nar_bounds = (0, (700/2.35))
     sigma_broad_bounds = ((broad_lower_bound/2.35), (7000/2.35))
     
-    if ((cen_bounds[0] < center < cen_bounds[1]) and
+    if ((narrow_cen_bounds[0] < center < narrow_cen_bounds[1]) and
         (cen_bounds[0] < broad_center < cen_bounds[1]) and
         (amp_bounds[0] < amp_nar < amp_bounds[1]) and 
         (amp_bounds[0] < amp_broad < amp_bounds[1]) and 
@@ -401,11 +402,16 @@ def plot_broad_emission(vel, flux, flux_err, flat_samples):
     broad_model = b_amp_50 * np.exp(-0.5 * ((vel - b_cen_50) / b_sig_50)**2) + cont_50
     nii_model = nii_6550_model + nii_6585_model + cont_50
 
+    ## subtracting a cont_50 because both the narrow and broad model have one 
+    total_model = narrow_model + broad_model + nii_6585_model + nii_6550_model - cont_50
+
     fig, ax = plt.subplots(figsize = [8,5])
     ax.plot(vel, flux, drawstyle = "steps-mid", color = "black")
     ax.fill_between(vel, flux - flux_err, flux + flux_err, color = "lightgray", step='mid')
     ax.plot(vel, narrow_model, color = "blue", label = r" $\mathrm{H\alpha}$ Narrow", linestyle = "--")
     ax.plot(vel, broad_model, color = "red", label = r" $\mathrm{H\alpha}$ Broad", linestyle = "--", zorder = 2)
+
+    ax.plot(vel, total_model, color = "darkviolet", label = "Total Fit", linestyle = "--", zorder = 5)
 
     if n6585_amp_50 > 0.01:
         ax.plot(vel, nii_model, color = "deepskyblue", linestyle = "--", label = r"[NII]")
