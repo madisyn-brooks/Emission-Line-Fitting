@@ -1,5 +1,7 @@
+import numpy as np 
 from astropy import units as u
 from astropy.io import fits
+from astropy.cosmology import WMAP9 as cosmo
 
 
 def load_1d_spec(fits_file):
@@ -82,3 +84,41 @@ def wv_to_vel(wv, z, line_use):
     vel = (wv-line_obs)/line_obs * 3e5
 
     return vel 
+
+def calculate_flux_and_luminosity(z, line_use, amp, sigma):
+
+    """
+    Calculates an emission line flux given a Gaussian distribution where the area under the curve 
+    is equal to A = sqrt(2 * pi) * amp * sigma 
+
+    Parameters:
+    ---------------
+    z: float
+        redshift of source 
+    line_use: float
+        wavelength of emission line in angstroms 
+    amp: np.array
+        full amplitude posteior from mcmc fit 
+    sigma: np.array
+        full sigma posterior from mcmc fit 
+
+    Returns:
+    --------------
+    flux_percentiles: np.array
+        [16,50,84] percentles of integrated emission line flux 
+    luminosity_percentiles: np.array
+        [16,50,84] percentles of integrated emission line luminoisty 
+    
+    """
+
+    lambda_use = (1 + z) * (line_use * 1e5)
+    
+    flux = np.sqrt(2 * np.pi) * amp * ((sigma / 3e5) * lambda_use) * u.erg / u.s / u.cm**2
+    flux_percentiles = [np.percentile(flux.value, 16), np.percentile(flux.value, 50), np.percentile(flux.value, 84)]
+
+    dist = (cosmo.luminosity_distance(z).to(u.cm))
+    lum = (flux * 4 * np.pi * (dist**2)).to(u.erg / u.s)
+    luminosity_percentiles = np.array([np.percentile(lum.value, 16), np.percentile(lum.value, 50), np.percentile(lum.value, 84)])
+
+    return flux_percentiles, luminosity_percentiles
+    
