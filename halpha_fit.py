@@ -148,6 +148,7 @@ def plot_narrow_emission(vel, flux, flux_err, flat_samples):
     ax.legend(frameon = False, fontsize = 14)
     ax.set_xlim(-5000,5000)
 
+
     return fig
 
 
@@ -175,8 +176,7 @@ def narrow_fit_ha(wv, flux, flux_err, z, spectra_name, save_direc,
                                         "Narrow Amp" : [np.nan],
                                         "Narrow Sigma": [np.nan], 
                                         "Continuum" : [np.nan] })
-        data_to_save.to_csv(full_path)
-
+        data_to_save.to_csv(full_path, index = False)
         
 
     else:
@@ -237,7 +237,7 @@ def narrow_fit_ha(wv, flux, flux_err, z, spectra_name, save_direc,
                                         "Narrow Amp" : flat_samples_ha[:,1],
                                         "Narrow Sigma": flat_samples_ha[:,2], 
                                         "Continuum" : flat_samples_ha[:,3]})
-        data_to_save.to_csv(full_path)
+        data_to_save.to_csv(full_path, index = False)
 
 
 
@@ -455,7 +455,7 @@ def broad_fit_ha(wv, flux, flux_err, z, spectra_name, save_direc,
                                         "Broad Sigma" : [np.nan],
                                         "NII Amp" : [np.nan],
                                         "Continuum" : [np.nan] })
-        data_to_save.to_csv(full_path)
+        data_to_save.to_csv(full_path, index = False)
 
         
 
@@ -526,4 +526,4 @@ def broad_fit_ha(wv, flux, flux_err, z, spectra_name, save_direc,
                                         "Broad Sigma" : flat_samples_ha[:,5],
                                         "NII Amp" : flat_samples_ha[:,6],
                                         "Continuum" : flat_samples_ha[:,7] })
-        data_to_save.to_csv(full_path)
+        data_to_save.to_csv(full_path, index = False)
