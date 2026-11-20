@@ -140,7 +140,7 @@ def plot_narrow_emission(vel, flux, flux_err, flat_samples):
     fig, ax = plt.subplots(figsize = [8,5])
     ax.plot(vel, flux, drawstyle = "steps-mid", color = "black")
     ax.fill_between(vel, flux - flux_err, flux + flux_err, color = "lightgray", step='mid')
-    ax.plot(vel, total_model, color = "blue", label = r" $\mathrm{H\alpha}$ Narrow", linestyle = "--")
+    ax.plot(vel, total_model, color = "blue", label = r"[OIII] Narrow", linestyle = "--")
     ax.set_xlabel(r"Velocity [km/s]", fontsize = 16)
     ax.set_ylabel(r'$f_{\lambda}$ [10$^{-19}$ erg s$^{-1}$ cm$^{-2}$ Å$^{-1}$]', fontsize = 16)
     ax.legend(frameon = False, fontsize = 14)
@@ -150,8 +150,10 @@ def plot_narrow_emission(vel, flux, flux_err, flat_samples):
     return fig
 
 
-def narrow_fit_o3(wv, flux, flux_err, z, spectra_name, save_direc, 
+def narrow_fit_o3(wv, flux, flux_err, z, spectra_name, save_direc, line_use,
                   *, scale_factor = 1e18, fit_window=5000, plot_chains = False, plot_spec = False):
+
+    print(save_direc, spectra_name)
     
     print()
     print("fitting the [OIII] line...")
@@ -160,7 +162,7 @@ def narrow_fit_o3(wv, flux, flux_err, z, spectra_name, save_direc,
     labels = ["center", "amp nar", r"$\sigma_{nar}$", "cont"]
 
     ## convert wavelength to velocity
-    vel = wv_to_vel(wv, z, ha_line)
+    vel = wv_to_vel(wv, z, line_use)
 
     ## limit vel, flux, and flux_err to +- fit_window around line 
     bounds = (vel > -1*fit_window) & (vel < 1*fit_window)
@@ -192,7 +194,7 @@ def narrow_fit_o3(wv, flux, flux_err, z, spectra_name, save_direc,
         sampler = emcee.EnsembleSampler(
                 nwalkers, ndim, o3_log_probability, args=(vel, flux, flux_err)
             )
-        sampler.run_mcmc(pos, 20000, progress = True, store = True)
+        sampler.run_mcmc(pos, 20000, progress = False, store = True)
         
         fig, axes = plt.subplots(4, figsize=(10, 4), sharex=True)
         samples = sampler.get_chain()
@@ -223,17 +225,11 @@ def narrow_fit_o3(wv, flux, flux_err, z, spectra_name, save_direc,
                         flat_samples_o3, labels=labels, quantiles=[0.16, 0.5, 0.84], show_titles = True, plot_datapoints=False
                         )
         
-                if plot_spec == True:
-                    print(f"plotting fit...")
-                    fig = plot_narrow_emission(vel, flux, flux_err, flat_samples_o3)
-                    fig_path = f"{save_direc}/{spectra_name}_broad_ha_fit.png"
-                    fig.savefig(fig_path, bbox_inches = "tight", dpi=300)
-        
-        fig = corner.corner(
-            flat_samples_o3, labels=labels, quantiles=[0.16, 0.5, 0.84], show_titles = True, plot_datapoints=False
-            )
-        
-        plot_narrow_emission(vel, flux, flux_err, flat_samples_o3, spectra_name)
+        if plot_spec == True:
+            print(f"plotting fit...")
+            fig = plot_narrow_emission(vel, flux, flux_err, flat_samples_o3)
+            fig_path = f"{save_direc}/{spectra_name}_narrow_o3_fit.png"
+            fig.savefig(fig_path, bbox_inches = "tight", dpi=300)
         
 
         folder_path = save_direc
