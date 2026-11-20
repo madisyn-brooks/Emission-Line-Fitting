@@ -132,6 +132,9 @@ def calculate_BIC(wv, flux, flux_err, z, line_use, fit_params, fit_type, *, scal
     flux = flux[bounds]
     flux_err = flux_err[bounds]
 
+    flux = flux.value
+    flux_err = flux_err.value
+
     if fit_type == "narrow":
 
         ## grab fit parameters from mcmc chains
@@ -143,8 +146,8 @@ def calculate_BIC(wv, flux, flux_err, z, line_use, fit_params, fit_type, *, scal
         ## make our narrow gaussian to plot 
         narrow_model = n_amp_50 * np.exp(-0.5 * ((vel - cen_50) / n_sig_50)**2) + cont_50
 
-        chi_2 = np.sum((flux - narrow_model)**2/(flux_err**2))
-        bic = chi_2 * len(fit_params.columns) * np.log(len(flux))
+        chi_2 = np.nansum((flux - narrow_model)**2/(flux_err**2))
+        bic = chi_2 + len(fit_params.columns) * np.log(len(flux))
 
         return bic 
 
@@ -152,12 +155,12 @@ def calculate_BIC(wv, flux, flux_err, z, line_use, fit_params, fit_type, *, scal
         ## grab fit parameters from mcmc chains
         cen_16, cen_50, cen_84 = np.percentile(fit_params['Center'], [16, 50, 84]) 
         b_cen_16, b_cen_50, b_cen_84 = np.percentile(fit_params['Broad Center'], [16, 50, 84]) 
-        n_amp_16, n_amp_50, n_amp_84 = np.percentile(fit_params['Narrow Amp'], [16, 50, 84]) 
-        b_amp_16, b_amp_50, b_amp_84 = np.percentile(fit_params['Broad Amp'], [16, 50, 84]) 
+        n_amp_16, n_amp_50, n_amp_84 = np.percentile(fit_params['Narrow Amp'], [16, 50, 84]) / scale_factor
+        b_amp_16, b_amp_50, b_amp_84 = np.percentile(fit_params['Broad Amp'], [16, 50, 84]) / scale_factor
         n_sig_16, n_sig_50, n_sig_84 = np.percentile(fit_params['Narrow Sigma'], [16, 50, 84])
         b_sig_16, b_sig_50, b_sig_84 = np.percentile(fit_params['Broad Sigma'], [16, 50, 84])
-        n6585_amp_16, n6585_amp_50, n6585_amp_84 = np.percentile(fit_params['NII Amp'], [16, 50, 84]) 
-        cont_16, cont_50, cont_84 = np.percentile(fit_params['Continuum'], [16, 50, 84]) 
+        n6585_amp_16, n6585_amp_50, n6585_amp_84 = np.percentile(fit_params['NII Amp'], [16, 50, 84]) / scale_factor
+        cont_16, cont_50, cont_84 = np.percentile(fit_params['Continuum'], [16, 50, 84]) / scale_factor
 
         nII_line = .65834 ## microns 
         line_diff = nII_line - line_use
@@ -179,7 +182,7 @@ def calculate_BIC(wv, flux, flux_err, z, line_use, fit_params, fit_type, *, scal
         ## subtracting a cont_50 because both the narrow and broad model have one 
         total_model = narrow_model + broad_model + nii_6585_model + nii_6550_model - cont_50
 
-        chi_2 = np.sum((flux - total_model)**2/(flux_err**2))
-        bic = chi_2 * len(fit_params.columns) * np.log(len(flux))
+        chi_2 = np.nansum((flux - total_model)**2/(flux_err**2))
+        bic = chi_2 + len(fit_params.columns) * np.log(len(flux))
 
         return bic 
